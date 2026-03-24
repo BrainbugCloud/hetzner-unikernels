@@ -86,22 +86,33 @@ echo "   Base image : $BASE_IMAGE"
 echo "   Unikernel  : $IMAGE_URL"
 echo ""
 
-SERVER_ID=$(hcloud server create \
-  --name "$SERVER_NAME" \
-  --type "$SERVER_TYPE" \
-  --image "$BASE_IMAGE" \
-  --location "$LOCATION" \
-  --user-data-from-file <(echo "$USER_DATA") \
-  --output json | python3 -c "import sys,json; print(json.load(sys.stdin)['server']['id'])")
+USERDATA_FILE=$(mktemp)
+echo "$USER_DATA" > "$USERDATA_FILE"
 
+RESPONSE=$(curl -s -X POST \
+  -H "Authorization: Bearer $HCLOUD_TOKEN" \
+  -H "Content-Type: application/json" \
+  https://api.hetzner.cloud/v1/servers \
+  -d "{
+    \"name\": \"$SERVER_NAME\",
+    \"server_type\": \"$SERVER_TYPE\",
+    \"image\": \"$BASE_IMAGE\",
+    \"location\": \"$LOCATION\",
+    \"user_data\": $(python3 -c "import json,sys; print(json.dumps(open('$USERDATA_FILE').read()))")
+  }")
+rm -f "$USERDATA_FILE"
+
+SERVER_ID=$(echo "$RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin)['server']['id'])")
 echo "✅ Server created (id: $SERVER_ID)"
 echo ""
 
-# Poll until the server is off (dd complete) or running (already rebooted)
+# Poll until the server comes back up after reboot
 echo "⏳ Waiting for unikernel to boot (polling every 10s)..."
 for i in $(seq 1 60); do
-  STATUS=$(hcloud server describe "$SERVER_NAME" --output json | python3 -c "import sys,json; print(json.load(sys.stdin)['status'])")
-  IP=$(hcloud server describe "$SERVER_NAME" --output json | python3 -c "import sys,json; print(json.load(sys.stdin)['public_net']['ipv4']['ip'])")
+  INFO=$(curl -s -H "Authorization: Bearer $HCLOUD_TOKEN" \
+    "https://api.hetzner.cloud/v1/servers/$SERVER_ID")
+  STATUS=$(echo "$INFO" | python3 -c "import sys,json; print(json.load(sys.stdin)['server']['status'])")
+  IP=$(echo "$INFO" | python3 -c "import sys,json; print(json.load(sys.stdin)['server']['public_net']['ipv4']['ip'])")
   echo "  [$i/60] status=$STATUS ip=$IP"
   if [[ "$STATUS" == "running" && $i -gt 3 ]]; then
     echo ""
