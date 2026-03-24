@@ -1,0 +1,8 @@
+{
+  "Uefi": true,
+  "CloudConfig": {
+    "BucketName": "unikernels",
+    "Zone": "hel1",
+    "Flavor": "cx22"
+  }
+}

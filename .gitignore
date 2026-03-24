@@ -1,0 +1,6 @@
+# OPS config files may contain credentials - use config.json.example as template
+config.json
+
+# OPS build artifacts
+*.img
+.ops/
