@@ -20,7 +20,7 @@ if [[ ! -f "$EXAMPLE_DIR/config.json" ]]; then
 fi
 
 echo "🔐 Loading credentials from SOPS..."
-OBJECT_STORAGE_DOMAIN=$(sops --decrypt "$SECRETS" | python3 -c "import sys,yaml; d=yaml.safe_load(sys.stdin); print(d['object_storage']['hetzner']['unikernels']['endpoint'].split('.',1)[1])")
+OBJECT_STORAGE_DOMAIN=$(sops --decrypt "$SECRETS" | python3 -c "import sys,yaml; d=yaml.safe_load(sys.stdin); print(d['object_storage']['hetzner']['unikernels']['endpoint'].split('.',2)[2])")
 OBJECT_STORAGE_KEY=$(sops --decrypt "$SECRETS" | python3 -c "import sys,yaml; d=yaml.safe_load(sys.stdin); print(d['object_storage']['hetzner']['unikernels']['access_key_id'])")
 OBJECT_STORAGE_SECRET=$(sops --decrypt "$SECRETS" | python3 -c "import sys,yaml; d=yaml.safe_load(sys.stdin); print(d['object_storage']['hetzner']['unikernels']['secret_access_key'])")
 
@@ -39,8 +39,11 @@ echo "   OBJECT_STORAGE_KEY:    ${OBJECT_STORAGE_KEY:0:6}..."
 
 cd "$EXAMPLE_DIR"
 echo ""
-echo "🔨 Building ops image for example: $EXAMPLE"
-ops image create -t hetzner -c config.json main.go
+echo "🔨 Compiling Go binary..."
+GOOS=linux GOARCH=amd64 go build -o "$EXAMPLE" main.go
+
+echo "🚀 Building ops image for example: $EXAMPLE"
+ops image create -t hetzner -c config.json "$EXAMPLE"
 
 echo ""
 echo "✅ Image created. To list images:"
