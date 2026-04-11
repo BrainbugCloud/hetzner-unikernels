@@ -1,0 +1,9 @@
+# OPS build artifacts
+*.img
+.ops/
+
+# Compiled binaries
+hello-http
+
+# OS files
+.DS_Store
