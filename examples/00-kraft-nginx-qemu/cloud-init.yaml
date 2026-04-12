@@ -1,0 +1,52 @@
+#cloud-config
+
+package_update: true
+packages:
+  - qemu-system-x86
+  - curl
+  - gnupg
+
+write_files:
+  - path: /root/setup-kraftkit.sh
+    content: |
+      #!/bin/bash
+      set -e
+
+      echo "[kraftkit] adding apt repo..."
+      mkdir -p /etc/apt/keyrings
+      curl -fsSL https://deb.pkg.kraftkit.sh/gpg.key | gpg --dearmor -o /etc/apt/keyrings/kraftkit.gpg --yes
+      echo 'deb [arch=amd64 signed-by=/etc/apt/keyrings/kraftkit.gpg] https://deb.pkg.kraftkit.sh /' > /etc/apt/sources.list.d/kraftkit.list
+
+      echo "[kraftkit] updating apt..."
+      apt-get update
+
+      echo "[kraftkit] installing kraftkit..."
+      apt-get install -y --no-install-recommends kraftkit
+
+      echo "[kraftkit] verifying..."
+      kraft version
+
+      echo "[kraftkit] running nginx unikernel..."
+      export HOME=/root
+      export PATH="/usr/sbin:/usr/bin:$PATH"
+      kraft run --detach -n nginx -p 8080:80 -M 256Mi --plat qemu --arch x86_64 --disable-acceleration unikraft.org/nginx:1.25
+
+      echo "[kraftkit] waiting for nginx..."
+      for i in $(seq 1 30); do
+        if curl -s --max-time 2 http://localhost:8080 >/dev/null 2>&1; then
+          echo "[kraftkit] nginx is up on port 8080"
+          break
+        fi
+        sleep 2
+      done
+
+      echo "[kraftkit] setting up iptables port 80 -> 8080..."
+      iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080
+      iptables -t nat -A OUTPUT -p tcp --dport 80 -j REDIRECT --to-port 8080
+
+      echo "[kraftkit] done — nginx reachable on port 80 and 8080"
+    owner: root:root
+    permissions: '0755'
+
+runcmd:
+  - /root/setup-kraftkit.sh 2>&1 | tee /root/kraftkit.log

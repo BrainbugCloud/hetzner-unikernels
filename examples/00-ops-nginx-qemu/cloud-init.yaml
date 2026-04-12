@@ -1,0 +1,55 @@
+#cloud-config
+
+package_update: true
+packages:
+  - qemu-system-x86
+  - curl
+
+write_files:
+  - path: /root/run-nginx-unikernel.sh
+    content: |
+      #!/bin/bash
+      set -x
+
+      echo "[ops] installing ops..."
+      curl https://ops.city/get.sh -sSL | sh || true
+
+      # ops installs to $HOME/.ops/bin — find it
+      for candidate in /root/.ops/bin/ops /.ops/bin/ops; do
+        if [ -x "$candidate" ]; then
+          export PATH="$(dirname "$candidate"):$PATH"
+          echo "[ops] found ops at: $candidate"
+          break
+        fi
+      done
+
+      if ! command -v ops >/dev/null 2>&1; then
+        echo "[ops] ERROR: ops binary not found"
+        exit 1
+      fi
+
+      echo "[ops] pulling nginx 1.18.0 package..."
+      ops pkg get eyberg/nginx:1.18.0
+
+      echo "[ops] running nginx unikernel (QEMU, port 8083)..."
+      ops pkg load eyberg/nginx:1.18.0 -p 8083 &
+
+      echo "[ops] waiting for nginx to start..."
+      for i in $(seq 1 30); do
+        if curl -s --max-time 2 http://localhost:8083 >/dev/null 2>&1; then
+          echo "[ops] nginx is up on port 8083"
+          break
+        fi
+        sleep 2
+      done
+
+      echo "[ops] setting up iptables to forward 80 -> 8083..."
+      iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8083
+      iptables -t nat -A OUTPUT -p tcp --dport 80 -j REDIRECT --to-port 8083
+
+      echo "[ops] done — nginx reachable on port 80 and 8083"
+    owner: root:root
+    permissions: '0755'
+
+runcmd:
+  - /root/run-nginx-unikernel.sh 2>&1 | tee /root/run.log
