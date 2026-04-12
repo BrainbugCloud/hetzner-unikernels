@@ -22,14 +22,41 @@ Unikernels aren't for everything. Debugging is harder, the ecosystem is smaller,
 
 | Runtime | Language | Hetzner Cloud VMs | Hetzner Dedicated | Notes |
 |---|---|---|---|---|
-| [Nanos / OPS](https://ops.city) | Go, Node, Python, Rust, C… | ✅ Native (object storage + cloud-init) | ✅ KVM | First-class Hetzner support via `ops` CLI |
-| [Unikraft](https://unikraft.org) | C, C++, Rust, Go, Python… | ⚠️ Custom boot setup required | ✅ KVM | No nested virt on cloud VMs; works on dedicated |
+| [Nanos](https://ops.city) | Go, Node, Python, Rust, C… | ✅ QEMU / Native | ✅ KVM | Fast deploy via `ops` CLI |
+| [Unikraft](https://unikraft.org) | C, C++, Rust, Go, Python… | ✅ QEMU (TCG) | ✅ KVM | Not a native deployment target |
 
-> **Hetzner Cloud VMs** don't support nested virtualization. OPS works around this with a cloud-init + `dd` approach — boot a generic Ubuntu VM, write the unikernel image directly to disk, and reboot into it. Other runtimes can use the same technique but need manual setup.
+> **Hetzner Cloud VMs** don't support nested virtualization. To run unikernels on these VMs, both Nanos and Unikraft must be wrapped in QEMU using TCG (Tiny Code Generator) emulation. This bypasses the host's lack of KVM capabilities and allows the unikernel kernels to boot.
+
+## Quick Start
+
+```bash
+# 1. Verify prerequisites
+make check
+
+# 2. Deploy example 00 — Nanos nginx in QEMU
+make 00-ops-nginx-qemu
+
+# 3. Get the IP and test
+make 00-ops-nginx-qemu-ip
+curl http://<IP>:8083
+
+# 4. Clean up
+make 00-ops-nginx-qemu-destroy
+```
+
+### Prerequisites
+
+- **hcloud CLI** — [Install guide](https://github.com/hetznercloud/cli/blob/main/docs/tutorials/setup-hcloud-cli.md)
+- **HCLOUD_TOKEN** — `export HCLOUD_TOKEN="<your-token>"` or `hcloud context create <name>`
+
+No local ops installation needed — the unikernel is built on the remote server via cloud-init.
 
 ## Examples
 
-See the [`examples/`](examples/) directory for ready-to-deploy unikernel examples.
+| # | Example | Description |
+|---|---|---|
+| 00a | [`00-ops-nginx-qemu`](examples/00-ops-nginx-qemu/) | Nanos nginx unikernel in QEMU on a Hetzner VM |
+| 00b | [`00-kraft-nginx-qemu`](examples/00-kraft-nginx-qemu/) | Unikraft nginx unikernel in QEMU (TCG) on a Hetzner VM |
 
 ## License
 

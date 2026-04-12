@@ -6,4 +6,5 @@
 hello-http
 
 # OS files
-.DS_Store
+.DS_Store.ssh/
+.ssh/
