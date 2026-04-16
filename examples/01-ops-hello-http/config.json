@@ -1,0 +1,14 @@
+{
+  "Uefi": true,
+  "CloudConfig": {
+    "BucketName": "unikernels",
+    "ImageName": "ops-hello-http",
+    "Flavor": "cpx22",
+    "Zone": "hel1"
+  },
+  "RunConfig": {
+    "ImageName": "ops-hello-http",
+    "InstanceName": "ops-hello-http",
+    "Ports": ["8080"]
+  }
+}
