@@ -2,9 +2,6 @@
 *.img
 .ops/
 
-# Compiled binaries
-hello-http
-
 # OS files
 .DS_Store.ssh/
 .ssh/

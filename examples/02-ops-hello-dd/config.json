@@ -1,0 +1,12 @@
+{
+  "Uefi": true,
+  "CloudConfig": {
+    "Platform": "hetzner",
+    "ImageName": "ops-hello-dd",
+    "Zone": "fsn1"
+  },
+  "RunConfig": {
+    "ImageName": "ops-hello-dd",
+    "Ports": ["8080"]
+  }
+}

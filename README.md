@@ -22,10 +22,10 @@ Unikernels aren't for everything. Debugging is harder, the ecosystem is smaller,
 
 | Runtime | Language | Hetzner Cloud VMs | Hetzner Dedicated | Notes |
 |---|---|---|---|---|
-| [Nanos](https://ops.city) | Go, Node, Python, Rust, C… | ✅ QEMU / Native | ✅ KVM | Fast deploy via `ops` CLI |
-| [Unikraft](https://unikraft.org) | C, C++, Rust, Go, Python… | ✅ QEMU (TCG) | ✅ KVM | Not a native deployment target |
+| [Nanos / OPS](https://ops.city) | Go, Node, Python, Rust, C… | ✅ Native (object storage + cloud-init) | ✅ KVM | First-class Hetzner support via `ops` CLI |
+| [Unikraft](https://unikraft.org) | C, C++, Rust, Go, Python… | ⚠️ Custom boot setup required | ✅ KVM | No nested virt on cloud VMs; works on dedicated |
 
-> **Hetzner Cloud VMs** don't support nested virtualization. To run unikernels on these VMs, both Nanos and Unikraft must be wrapped in QEMU using TCG (Tiny Code Generator) emulation. This bypasses the host's lack of KVM capabilities and allows the unikernel kernels to boot.
+> **Hetzner Cloud VMs** don't support nested virtualization. OPS works around this with a cloud-init + `dd` approach — boot a generic Ubuntu VM, write the unikernel image directly to disk, and reboot into it. Other runtimes can use the same technique but need manual setup.
 
 ## Quick Start
 
@@ -33,30 +33,61 @@ Unikernels aren't for everything. Debugging is harder, the ecosystem is smaller,
 # 1. Verify prerequisites
 make check
 
-# 2. Deploy example 00 — Nanos nginx in QEMU
-make 00-ops-nginx-qemu
+# 2. Deploy an example
+make 00-ops-nginx-qemu     # nginx in QEMU via cloud-init
+make 02-ops-hello-dd        # Go HTTP server dd'd to disk
 
 # 3. Get the IP and test
-make 00-ops-nginx-qemu-ip
-curl http://<IP>:8083
+make ip
+curl http://$(make -s ip):8080
 
-# 4. Clean up
-make 00-ops-nginx-qemu-destroy
+# 4. SSH into the server (cloud-init examples only)
+make ssh
+
+# 5. Clean up
+make destroy
 ```
 
 ### Prerequisites
 
-- **hcloud CLI** — [Install guide](https://github.com/hetznercloud/cli/blob/main/docs/tutorials/setup-hcloud-cli.md)
+- **hcloud CLI** >= 1.62 — [Install guide](https://github.com/hetznercloud/cli/blob/main/docs/tutorials/setup-hcloud-cli.md)
 - **HCLOUD_TOKEN** — `export HCLOUD_TOKEN="<your-token>"` or `hcloud context create <name>`
+- **ops CLI** — `curl https://ops.city/get.sh | sh` (examples 01, 02)
 
-No local ops installation needed — the unikernel is built on the remote server via cloud-init.
+### Server reuse
+
+All examples share one Hetzner VM (`SERVER=unikernel-example`). First run creates it; subsequent runs rebuild it. This avoids hourly billing for multiple servers. Run `make destroy` when done.
 
 ## Examples
 
-| # | Example | Description |
-|---|---|---|
-| 00a | [`00-ops-nginx-qemu`](examples/00-ops-nginx-qemu/) | Nanos nginx unikernel in QEMU on a Hetzner VM |
-| 00b | [`00-kraft-nginx-qemu`](examples/00-kraft-nginx-qemu/) | Unikraft nginx unikernel in QEMU (TCG) on a Hetzner VM |
+| # | Target | Description | Requires |
+|---|---|---|---|
+| 00a | `make 00-ops-nginx-qemu` | OPS nginx in QEMU via cloud-init | hcloud |
+| 00b | `make 00-kraft-nginx-qemu` | Kraftkit nginx in QEMU via cloud-init | hcloud |
+| 01 | `make 01-ops-hello-http` | Native OPS deploy: snapshot + instance | hcloud, ops, object storage |
+| 02 | `make 02-ops-hello-dd` | OPS image dd'd to disk, HTTP server on :8080 | hcloud, ops |
+
+### Example 00a/00b: QEMU via cloud-init
+
+Spins up a Hetzner VM, installs OPS or Kraftkit via cloud-init, and runs a unikernel inside QEMU on the VM. No local tooling needed beyond `hcloud`.
+
+### Example 01: Native OPS deployment
+
+Uses `ops image create -t hetzner` to build the image, upload to Hetzner Object Storage, create a snapshot, and boot an instance from it. Requires object storage credentials:
+
+```bash
+export OBJECT_STORAGE_KEY="<your-key>"
+export OBJECT_STORAGE_SECRET="<your-secret>"
+```
+
+### Example 02: dd deployment (no object storage)
+
+Builds the OPS image locally with `ops build -t hetzner`, uploads it to the VM via `scp`, writes it to `/dev/sda` with `dd`, and power-cycles the server. No object storage needed — ideal for dev iteration.
+
+```bash
+make 02-ops-hello-dd
+curl http://$(make -s ip):8080
+```
 
 ## License
 
