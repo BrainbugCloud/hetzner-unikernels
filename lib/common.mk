@@ -89,7 +89,7 @@ ensure-ssh-key:
 	fi
 	@if ! hcloud ssh-key describe $(SSH_KEY) >/dev/null 2>&1; then \
 		echo "$(CYAN)Uploading $(SSH_KEY) to Hetzner...$(RESET)"; \
-		hcloud ssh-key create --name $(SSH_KEY) --public-key-file "$(SSH_KEY_PATH).pub"; \
+		hcloud ssh-key create --name $(SSH_KEY) --public-key-from-file "$(SSH_KEY_PATH).pub"; \
 	fi
 
 .PHONY: ip ssh destroy servers
