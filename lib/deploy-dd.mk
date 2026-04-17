@@ -84,7 +84,7 @@ define dd-deploy
 	   "cp /bin/dd /dev/shm/dd && \
 	    blkdiscard /dev/sda -f || true && \
 	    /dev/shm/dd if=/dev/shm/disk.img of=/dev/sda bs=4M conv=sync && \
-	    echo s > /proc/sysrq-trigger && echo o > /proc/sysrq-trigger" || true; \
+	    echo s > /proc/sysrq-trigger && sleep 3 && echo o > /proc/sysrq-trigger" || true; \
 	 echo "$(BOLD)Waiting for server to power off...$(RESET)"; \
 	 until [ "$$(hcloud server describe $(SERVER) -o format='{{.Status}}')" = "off" ]; do sleep 3; done; \
 	 echo "$(BOLD)Powering on...$(RESET)"; \
