@@ -2,6 +2,16 @@
 *.img
 .ops/
 
+# Unikraft build artifacts (kraft output, make -O dirs, staged sources)
+.build-*/
+.unikraft/
+image/
+**/.config.*
+
+# Compiled Go binaries — sources only, never commit build output
+examples/*/hello-http
+examples/*/hello-dd
+
 # OS files
-.DS_Store.ssh/
+.DS_Store
 .ssh/
