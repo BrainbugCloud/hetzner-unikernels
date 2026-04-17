@@ -8,7 +8,7 @@
 #                          hcloud poweron (so firmware reinitialises — sysrq 'b' reboot
 #                          leaves vCPU state stale and new disk boots to PXE).
 
-SSH_OPTS = -o StrictHostKeyChecking=no
+SSH_OPTS = -o StrictHostKeyChecking=no -i $(SSH_KEY_PATH)
 
 # ── Create-or-rebuild on vanilla Ubuntu ───────────────────────────────
 define ensure-server-vanilla
