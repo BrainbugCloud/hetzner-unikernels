@@ -62,6 +62,7 @@ jobs:
 
       - name: Install OPS
         run: |
+          sudo apt-get install -y qemu-system-x86
           curl -fsSL https://ops.city/get.sh | sh
           echo "$HOME/.ops/bin" >> "$GITHUB_PATH"
 
