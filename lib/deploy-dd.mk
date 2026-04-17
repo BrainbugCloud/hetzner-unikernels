@@ -14,7 +14,7 @@ SSH_OPTS = -o StrictHostKeyChecking=no -i $(SSH_KEY_PATH)
 define ensure-server-vanilla
 	@if hcloud server describe $(SERVER) >/dev/null 2>&1; then \
 		echo "$(BOLD)Rebuilding $(SERVER) to vanilla $(BASE_IMAGE)...$(RESET)"; \
-		hcloud server rebuild $(SERVER) --image $(BASE_IMAGE); \
+		printf '#cloud-config\n' | hcloud server rebuild $(SERVER) --image $(BASE_IMAGE) --user-data-from-file /dev/stdin; \
 	else \
 		$(MAKE) ensure-ssh-key; \
 		echo "$(BOLD)Creating $(SERVER)...$(RESET)"; \
