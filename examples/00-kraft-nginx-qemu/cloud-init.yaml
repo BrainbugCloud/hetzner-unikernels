@@ -3,6 +3,13 @@
 output:
   all: '| tee /dev/tty1'
 
+write_files:
+  - path: /etc/systemd/system/getty@tty1.service.d/noclear.conf
+    content: |
+      [Service]
+      ExecStart=
+      ExecStart=-/sbin/agetty --noclear %I $TERM
+
 package_update: true
 packages:
   - qemu-system-x86
