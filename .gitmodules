@@ -1,0 +1,16 @@
+[submodule "third_party/unikraft"]
+	path = third_party/unikraft
+	url = https://github.com/unikraft/unikraft.git
+	branch = stable
+[submodule "third_party/lib-lwip"]
+	path = third_party/lib-lwip
+	url = https://github.com/unikraft/lib-lwip.git
+	branch = stable
+[submodule "third_party/lib-libelf"]
+	path = third_party/lib-libelf
+	url = https://github.com/unikraft/lib-libelf.git
+	branch = stable
+[submodule "third_party/app-elfloader"]
+	path = third_party/app-elfloader
+	url = https://github.com/unikraft/app-elfloader.git
+	branch = stable
