@@ -17,7 +17,7 @@ deploy: check
 	@echo ""
 	@echo "$(GREEN)$(BOLD)$(SERVER) running 00-ops-nginx-qemu!$(RESET)"
 	@echo "Cloud-init is installing ops and booting the unikernel (~2-3 min)."
-	@echo "  http://$$($(MAKE) -s -C $(REPO_ROOT) ip):8083"
+	@echo "  http://$$(hcloud server describe $(SERVER) -o format='{{.PublicNet.IPv4.IP}}'):8083"
 	@echo "SSH: make ssh"
 
 clean:

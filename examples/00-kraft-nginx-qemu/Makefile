@@ -15,7 +15,7 @@ deploy: check
 	@echo ""
 	@echo "$(GREEN)$(BOLD)$(SERVER) running 00-kraft-nginx-qemu!$(RESET)"
 	@echo "Cloud-init is installing kraftkit and booting the unikernel (~2-3 min)."
-	@echo "Test with:  curl http://$$($(MAKE) -s -C $(REPO_ROOT) ip):8080"
+	@echo "Test with:  curl http://$$(hcloud server describe $(SERVER) -o format='{{.PublicNet.IPv4.IP}}'):8080"
 	@echo "SSH:        make ssh"
 
 clean:

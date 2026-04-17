@@ -38,7 +38,7 @@ deploy: check image
 	 until curl -sf --max-time 3 http://$$IP:8080 >/dev/null 2>&1; do sleep 3; done
 	@echo ""
 	@echo "$(GREEN)$(BOLD)$(SERVER) running 02-ops-hello-dd!$(RESET)"
-	@echo "Test: curl http://$$($(MAKE) -s -C $(REPO_ROOT) ip):8080"
+	@echo "Test: curl http://$$(hcloud server describe $(SERVER) -o format='{{.PublicNet.IPv4.IP}}'):8080"
 
 clean:
 	rm -rf image/ hello-dd
