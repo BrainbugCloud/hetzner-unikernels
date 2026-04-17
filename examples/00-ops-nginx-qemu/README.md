@@ -1,46 +1,80 @@
-# Example 00a — OPS/Nanos Nginx in QEMU
+# 00-ops-nginx-qemu — OPS + nginx, running in QEMU on a Hetzner VM
 
-Spin up a Hetzner Cloud VM, install [OPS](https://ops.city), and run the prebuilt nginx 1.18.0 unikernel inside QEMU.
+## Why
 
-## What happens
+This is the safest entry point into unikernels on Hetzner. You don't install anything locally, you don't care about Hetzner's firmware quirks, you don't pay for object storage. You just spin up an Ubuntu VM, tell cloud-init to install OPS, and let it boot an nginx unikernel under software-emulated QEMU.
 
-1. `hcloud` creates a cpx22 VM with cloud-init
-2. Cloud-init installs `qemu-system-x86` and `ops`
-3. `ops pkg load` downloads the `eyberg/nginx:1.18.0` package and boots it in QEMU
-4. Nginx listens on port **8083** inside the VM
-5. iptables redirects port 80 → 8083 for easy public access
+It's also the **slowest** option. QEMU on a VM without KVM is pure software emulation — expect nginx to serve requests at something like 1/10th native speed. But as a "what is a unikernel even" demo, it's perfect: you can SSH into the Ubuntu VM and poke at the QEMU process, attach strace, read logs. The training-wheels version.
 
-## Deploy
+## Prerequisites
 
 ```bash
-make 00-ops-nginx-qemu
+# From the repo root
+make check          # verifies hcloud CLI + token
 ```
 
-## Test
+The only thing this example needs that `make check` won't verify for you is an SSH key named `bb-podman-key` (the default) uploaded to your Hetzner project — or set `SSH_KEY=<your-key-name>` when you run.
+
+## How it works
+
+```
+           your laptop                        Hetzner cpx22 VM
+       ┌──────────────────┐              ┌──────────────────────────┐
+       │ hcloud server    │─create──────▶│ Ubuntu 24.04             │
+       │   --user-data    │              │ cloud-init runs:         │
+       │   cloud-init.yaml│              │   apt install qemu       │
+       └──────────────────┘              │   curl get.sh | sh       │
+                                         │   ops pkg load nginx     │
+                                         │     -p 8083              │
+                                         │                          │
+                                         │   ┌──────────────────┐   │
+                                         │   │ QEMU (software)  │   │
+                                         │   │  ┌────────────┐  │   │
+                                         │   │  │  nginx     │  │   │ :8083
+                                         │   │  │  unikernel │◀─┼───┼────── HTTP
+                                         │   │  └────────────┘  │   │
+                                         │   └──────────────────┘   │
+                                         └──────────────────────────┘
+```
+
+Two indirections: Hetzner boots Ubuntu, Ubuntu runs QEMU, QEMU runs nginx-as-a-unikernel. The unikernel itself never sees the hypervisor directly — it sees QEMU's virtual hardware.
+
+## Try it
 
 ```bash
-make 00-ops-nginx-qemu-ip    # print the VM IP
-curl http://<IP>:8083
-curl http://<IP>:80
+# From the repo root
+make 00-ops-nginx-qemu        # ~2-3 min for cloud-init to finish
+
+# Once it's done:
+curl http://$(make -s ip):8083
+
+# SSH in and look around:
+make ssh
+# then: cat /root/run.log
 ```
 
-Expected: `Hello from Nanos!`
+## What you should see
 
-## SSH
-
-```bash
-hcloud server ssh ops-nginx-qemu
-ps aux | grep qemu          # the unikernel is a QEMU process
+```
+$ curl http://$(make -s ip):8083
+<!DOCTYPE html>
+<html>
+<head><title>Welcome to nginx!</title>
+…
 ```
 
-## Destroy
+Inside the VM (`make ssh` and then `tail /root/run.log`):
 
-```bash
-make 00-ops-nginx-qemu-destroy
+```
+[ops] found ops at: /root/.ops/bin/ops
+[ops] pulling nginx 1.18.0 package...
+[ops] running nginx unikernel (QEMU, port 8083)...
+[ops] nginx is up on port 8083
+[ops] done — nginx reachable on port 80 and 8083
 ```
 
-## Notes
+## Things that go wrong
 
-- The prebuilt `eyberg/nginx:1.18.0` package listens on **8083** (http) and **8084** (https)
-- OPS installs to `/.ops` when $HOME is `/` (cloud-init context)
-- No custom image build needed — this is the fastest way to get a unikernel running
+- **`curl: (7) Failed to connect`** for 2–3 minutes after `make` returns — expected. `make` finishes as soon as Hetzner says the VM is running; cloud-init still needs to `apt install qemu`, download the OPS binary, pull the nginx package, and wait for QEMU to boot the unikernel. Watch `/root/run.log` on the VM if you want to follow along.
+- **`ops pkg get` hangs or times out** — OPS's package CDN occasionally has a bad day. SSH in, `kill` the hung `ops` process, and rerun `/root/run-nginx-unikernel.sh`. Not persistent; the next run almost always works.
+- **Port 8083 closed after a reboot** — the iptables rule and the QEMU process are both ephemeral. Rebooting the VM drops them. `make 00-ops-nginx-qemu` again to redeploy (it will rebuild cloud-init, not create a new server).
