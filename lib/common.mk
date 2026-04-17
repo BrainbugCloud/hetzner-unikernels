@@ -87,10 +87,16 @@ ensure-ssh-key:
 		echo "$(CYAN)Generating SSH key $(SSH_KEY_PATH)...$(RESET)"; \
 		ssh-keygen -t ed25519 -C "unikernel-key" -N "" -f "$(SSH_KEY_PATH)" >/dev/null; \
 	fi
-	@if ! hcloud ssh-key describe $(SSH_KEY) >/dev/null 2>&1; then \
+	@LOCAL_FP=$$(ssh-keygen -E md5 -lf "$(SSH_KEY_PATH).pub" | awk '{print $$2}' | sed 's/MD5://'); \
+	 REMOTE_FP=$$(hcloud ssh-key describe $(SSH_KEY) -o format='{{.Fingerprint}}' 2>/dev/null); \
+	 if [ -z "$$REMOTE_FP" ]; then \
 		echo "$(CYAN)Uploading $(SSH_KEY) to Hetzner...$(RESET)"; \
 		hcloud ssh-key create --name $(SSH_KEY) --public-key-from-file "$(SSH_KEY_PATH).pub"; \
-	fi
+	 elif [ "$$LOCAL_FP" != "$$REMOTE_FP" ]; then \
+		echo "$(CYAN)Key fingerprint mismatch — replacing $(SSH_KEY) in Hetzner...$(RESET)"; \
+		hcloud ssh-key delete $(SSH_KEY); \
+		hcloud ssh-key create --name $(SSH_KEY) --public-key-from-file "$(SSH_KEY_PATH).pub"; \
+	 fi
 
 .PHONY: ip ssh destroy servers
 
