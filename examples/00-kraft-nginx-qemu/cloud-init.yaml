@@ -1,5 +1,8 @@
 #cloud-config
 
+output:
+  all: '| tee /dev/tty1'
+
 package_update: true
 packages:
   - qemu-system-x86
