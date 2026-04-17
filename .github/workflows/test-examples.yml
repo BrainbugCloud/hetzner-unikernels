@@ -1,0 +1,156 @@
+# .github/workflows/test-examples.yml
+#
+# Weekly regression canary. Deploys each CI-eligible example end-to-end on a
+# real Hetzner VM, asserts it's serving what it should be, tears the VM down.
+# Catches rot from Unikraft-stable updates, Hetzner API changes, and dependency
+# drift (kraftkit, OPS, hcloud CLI) within a week.
+#
+# Uses a separate server name (`unikernel-ci`) from local dev (`unikernel-example`)
+# so the two never stomp on each other.
+#
+# Examples skipped (for now):
+#   - 01-ops-hello-http : needs a paid object-storage bucket.
+#   - 03-unikraft-console : verification is visual (serial console); no network signal yet.
+
+name: test-examples
+
+on:
+  schedule:
+    - cron: '30 5 * * 1'        # Mondays 05:30 UTC
+  workflow_dispatch:             # manual run from the Actions tab
+
+permissions:
+  contents: read
+
+concurrency:
+  # Every run touches the same Hetzner server. Two runs racing would stomp.
+  group: hetzner-shared-server
+  cancel-in-progress: false
+
+env:
+  HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}
+  SERVER: unikernel-ci
+  # Pin versions so a bad release of a tool doesn't silently change behaviour.
+  HCLOUD_VERSION: '1.62.2'
+
+jobs:
+  test-examples:
+    name: Deploy and smoke-test each example
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30          # whole job upper bound; individual examples < 10 min
+
+    steps:
+      - name: Checkout (with submodules)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Preflight — HCLOUD_TOKEN present
+        run: |
+          if [ -z "$HCLOUD_TOKEN" ]; then
+            echo "::error::HCLOUD_TOKEN secret is missing. Set it at: Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+
+      - name: Install hcloud CLI
+        run: |
+          curl -sSLo hcloud.tar.gz \
+            "https://github.com/hetznercloud/cli/releases/download/v${HCLOUD_VERSION}/hcloud-linux-amd64.tar.gz"
+          sudo tar -C /usr/local/bin --no-same-owner -xzf hcloud.tar.gz hcloud
+          rm hcloud.tar.gz
+          hcloud version
+
+      - name: Install OPS
+        run: |
+          curl -fsSL https://ops.city/get.sh | sh
+          echo "$HOME/.ops/bin" >> "$GITHUB_PATH"
+
+      - name: Install Go (for OPS image builds)
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Pre-clean any leftover CI server
+        # Previous run may have died between create and destroy.
+        run: hcloud server delete "$SERVER" 2>/dev/null || true
+
+      # ── 00-ops-nginx-qemu ────────────────────────────────────────────
+      - name: Deploy 00-ops-nginx-qemu
+        timeout-minutes: 8
+        run: make 00-ops-nginx-qemu
+
+      - name: Smoke-test 00-ops-nginx-qemu (port 8083)
+        timeout-minutes: 8
+        run: |
+          IP=$(make -s ip)
+          echo "Polling http://$IP:8083 (cloud-init may still be installing QEMU + ops)..."
+          for i in $(seq 1 60); do
+            if curl -sf --max-time 3 "http://$IP:8083" >/dev/null; then
+              echo "::notice::00-ops-nginx-qemu serving on $IP:8083"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::00-ops-nginx-qemu never came up within 5 minutes"
+          exit 1
+
+      # ── 00-kraft-nginx-qemu ──────────────────────────────────────────
+      - name: Deploy 00-kraft-nginx-qemu
+        timeout-minutes: 8
+        run: make 00-kraft-nginx-qemu
+
+      - name: Smoke-test 00-kraft-nginx-qemu (port 8080)
+        timeout-minutes: 8
+        run: |
+          IP=$(make -s ip)
+          echo "Polling http://$IP:8080 (cloud-init installing kraftkit)..."
+          for i in $(seq 1 60); do
+            if curl -sf --max-time 3 "http://$IP:8080" >/dev/null; then
+              echo "::notice::00-kraft-nginx-qemu serving on $IP:8080"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::00-kraft-nginx-qemu never came up within 5 minutes"
+          exit 1
+
+      # ── 02-ops-hello-dd ──────────────────────────────────────────────
+      - name: Deploy 02-ops-hello-dd
+        timeout-minutes: 10
+        run: make 02-ops-hello-dd
+        # The per-example Makefile already polls port 8080 before returning,
+        # so a separate smoke-test step isn't strictly required -- but we
+        # keep one to be explicit about the success criterion.
+
+      - name: Smoke-test 02-ops-hello-dd (port 8080)
+        run: |
+          IP=$(make -s ip)
+          BODY=$(curl -sf --max-time 5 "http://$IP:8080")
+          echo "$BODY"
+          case "$BODY" in
+            *"Hello World from Nanos Unikernel"*) echo "::notice::02-ops-hello-dd response matches";;
+            *) echo "::error::unexpected body on port 8080"; exit 1;;
+          esac
+
+      # ── Always-run teardown ──────────────────────────────────────────
+      - name: Capture cloud-init log on failure
+        if: failure()
+        continue-on-error: true
+        run: |
+          IP=$(make -s ip 2>/dev/null) || exit 0
+          mkdir -p ci-logs
+          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 \
+              root@"$IP" 'cat /var/log/cloud-init-output.log' \
+              > ci-logs/cloud-init-output.log 2>&1 || true
+
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-logs-${{ github.run_id }}
+          path: ci-logs/
+          if-no-files-found: ignore
+
+      - name: Tear down CI server (always)
+        if: always()
+        run: hcloud server delete "$SERVER" 2>/dev/null || true

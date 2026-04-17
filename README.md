@@ -91,9 +91,30 @@ hetzner-unikernels/
 
 ## CI
 
-A weekly GitHub Action deploys `00-ops-nginx-qemu`, `00-kraft-nginx-qemu`, and `02-ops-hello-dd` end-to-end on a real Hetzner VM (name: `unikernel-ci`, separate from the dev `unikernel-example` so the two don't step on each other). See `.github/workflows/test-examples.yml`. The `HCLOUD_TOKEN` lives in a repo-scoped GitHub Actions secret — **do not** check it into the repo or into `../secrets/`.
+A weekly GitHub Action deploys `00-ops-nginx-qemu`, `00-kraft-nginx-qemu`, and `02-ops-hello-dd` end-to-end on a real Hetzner VM (name: `unikernel-ci`, separate from the dev `unikernel-example` so the two don't step on each other). See [`.github/workflows/test-examples.yml`](.github/workflows/test-examples.yml). Examples 01 and 03 are skipped: 01 needs a paid object-storage bucket; 03's verification is visual (serial console output), no network signal.
 
-Examples 01 and 03 are skipped from CI: 01 needs a paid object-storage bucket; 03's verification is visual (serial console output), no network signal.
+### Hetzner token: where it lives, how to set it
+
+The workflow reads `HCLOUD_TOKEN` from a **repo-scoped GitHub Actions secret**. That's the only right place for it: encrypted at rest, not exposed to pull requests from forks, not in any file in this repo.
+
+Set it once:
+
+```bash
+# From a machine where `gh` is authed (see CONTRIBUTING.md):
+gh secret set HCLOUD_TOKEN --repo BrainbugCloud/hetzner-unikernels
+# paste your Hetzner API token when prompted
+```
+
+Recommended: use a **project-scoped** Hetzner token (not account-root), read-write on servers, no object-storage access — the CI doesn't touch object storage. Rotate yearly or if leaked.
+
+**Do not** check the token into `.github/workflows/*.yml`, into `../secrets/password-store.yaml.plain`, or into any file in this repo. The `../secrets/` file is for local dev (it holds a GitHub PAT used by `gh auth login`); it's not a transport for cloud-provider credentials.
+
+To trigger a run manually (e.g., after editing the workflow or an example):
+
+```bash
+gh workflow run test-examples.yml --repo BrainbugCloud/hetzner-unikernels
+gh run watch --repo BrainbugCloud/hetzner-unikernels
+```
 
 ## License
 
