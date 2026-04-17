@@ -12,6 +12,7 @@ SSH_OPTS = -o StrictHostKeyChecking=no
 
 # ── Create-or-rebuild on vanilla Ubuntu ───────────────────────────────
 define ensure-server-vanilla
+	$(MAKE) ensure-ssh-key
 	@if hcloud server describe $(SERVER) >/dev/null 2>&1; then \
 		echo "$(BOLD)Rebuilding $(SERVER) to vanilla $(BASE_IMAGE)...$(RESET)"; \
 		hcloud server rebuild $(SERVER) --image $(BASE_IMAGE); \
@@ -29,6 +30,7 @@ endef
 # ── Create-or-rebuild with a cloud-init file ──────────────────────────
 # Usage: $(call ensure-server-cloudinit,path/to/cloud-init.yaml)
 define ensure-server-cloudinit
+	$(MAKE) ensure-ssh-key
 	@if hcloud server describe $(SERVER) >/dev/null 2>&1; then \
 		echo "$(BOLD)Rebuilding $(SERVER) with cloud-init...$(RESET)"; \
 		hcloud server rebuild $(SERVER) \

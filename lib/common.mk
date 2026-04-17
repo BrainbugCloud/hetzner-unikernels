@@ -18,7 +18,8 @@ SERVER      ?= unikernel-example
 SERVER_TYPE ?= cpx22
 LOCATION    ?= fsn1
 BASE_IMAGE  ?= ubuntu-24.04
-SSH_KEY     ?= bb-podman-key
+SSH_KEY      ?= unikernel-key
+SSH_KEY_PATH ?= $(HOME)/.ssh/$(SSH_KEY)
 
 # ── Minimum hcloud version (rebuild --user-data-from-file needs >= 1.62) ─
 HCLOUD_MIN_VERSION := 1.62.0
@@ -77,6 +78,19 @@ check-token:
 	@echo "$(GREEN)Hetzner API reachable$(RESET)"
 
 # ── Utility targets on the shared server ──────────────────────────────
+
+# ensure-ssh-key — generate ~/.ssh/unikernel-key if absent, upload to Hetzner if not there.
+# Called by ensure-server-vanilla so the key always exists before server creation.
+.PHONY: ensure-ssh-key
+ensure-ssh-key:
+	@if [ ! -f "$(SSH_KEY_PATH)" ]; then \
+		echo "$(CYAN)Generating SSH key $(SSH_KEY_PATH)...$(RESET)"; \
+		ssh-keygen -t ed25519 -C "unikernel-key" -N "" -f "$(SSH_KEY_PATH)" >/dev/null; \
+	fi
+	@if ! hcloud ssh-key describe $(SSH_KEY) >/dev/null 2>&1; then \
+		echo "$(CYAN)Uploading $(SSH_KEY) to Hetzner...$(RESET)"; \
+		hcloud ssh-key create --name $(SSH_KEY) --public-key-file "$(SSH_KEY_PATH).pub"; \
+	fi
 
 .PHONY: ip ssh destroy servers
 
