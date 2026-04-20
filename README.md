@@ -57,6 +57,8 @@ Server type is set at creation time and persists through rebuilds and rescales:
 - **Rescaling cx → cpx preserves firmware** (still SeaBIOS under the hood), so VGA keeps working.
 - The `dd` deploy path works on both, as long as you use `sysrq 'o'` (poweroff) + `hcloud server poweron` — `sysrq 'b'` (reboot) leaves firmware in stale state and the new disk boots to PXE.
 
+For the full per-generation breakdown (cpx gen 1 vs gen 2, cx gen 3, ccx gen 3), the CPU feature flags each tier exposes, which combinations are orderable in which location, and which Unikraft build target fits which server class, see [`docs/compatibility.md`](docs/compatibility.md). The methodology behind that matrix — what we measure on each VM and the script that drives the sweep — is documented in [`docs/hardware-survey.md`](docs/hardware-survey.md).
+
 ## Shared server semantics
 
 There's one `SERVER=unikernel-example` VM. Every example target either:
