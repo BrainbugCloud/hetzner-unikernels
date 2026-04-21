@@ -1,16 +1,16 @@
 [submodule "third_party/unikraft"]
 	path = third_party/unikraft
 	url = https://github.com/BrainbugCloud/unikraft
-	branch = feat/gop-console-stable
+	branch = v0.20.0-Kiviuq/feat/gop-console
 [submodule "third_party/lib-lwip"]
 	path = third_party/lib-lwip
 	url = https://github.com/unikraft/lib-lwip.git
-	branch = stable
+	tag = RELEASE-0.20.0
 [submodule "third_party/lib-libelf"]
 	path = third_party/lib-libelf
 	url = https://github.com/unikraft/lib-libelf.git
-	branch = stable
+	tag = RELEASE-0.20.0
 [submodule "third_party/app-elfloader"]
 	path = third_party/app-elfloader
 	url = https://github.com/unikraft/app-elfloader.git
-	branch = stable
+	tag = RELEASE-0.20.0
