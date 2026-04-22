@@ -1,5 +1,7 @@
 # hetzner-unikernels
 
+[![test-examples](https://github.com/BrainbugCloud/hetzner-unikernels/actions/workflows/test-examples.yml/badge.svg)](https://github.com/BrainbugCloud/hetzner-unikernels/actions/workflows/test-examples.yml)
+
 Five ways to run a unikernel on [Hetzner Cloud](https://hetzner.com/cloud), arranged from easiest to most hands-on. Pick one, run it, read the per-example README, then try the next.
 
 ## Why read this
@@ -43,6 +45,7 @@ From simplest to most hands-on. Every entry is a directory under `examples/` wit
 | 01 | `make 01-ops-hello-http` | OPS uploads the image to Hetzner **object storage**, creates a Hetzner **snapshot**, boots a VM off the snapshot | "Upload once, boot many." Needs object-storage credentials. The official OPS/Hetzner path. |
 | 02 | `make 02-ops-hello-dd` | Same OPS image, but `scp`'d to a throwaway Ubuntu VM and `dd`'d onto `/dev/sda` — no object storage | The `dd` trick. Fast dev-iteration. Generalises to any runtime that can produce a raw disk image. |
 | 03 | `make 03-unikraft-console` | Unikraft built from source (via git submodules), packaged as a GRUB-multiboot or EFI-stub disk image, dd'd to the VM | Building a unikernel from kconfig up. Both Hetzner boot protocols (cx/SeaBIOS and cpx/UEFI). |
+| 04 | `make 04-unikraft-go-http` | Go HTTP server compiled with PIE+static-pie, packaged as a GRUB or EFI unikernel with lwip virtio-net | Go-on-Unikraft, networking, GOP console (UEFI), and virtio-modern-pci. |
 
 ## Hetzner firmware matters
 
@@ -87,13 +90,16 @@ hetzner-unikernels/
     ├── 00-kraft-nginx-qemu/          — kraftkit + nginx in QEMU
     ├── 01-ops-hello-http/            — OPS native deploy via object storage
     ├── 02-ops-hello-dd/              — OPS dd deploy (no object storage)
-    └── 03-unikraft-console/          — Unikraft from source, GRUB + EFI, dd deploy
-        └── defconfigs/               — multiboot / efi (override with DEFCONFIG=...)
+    ├── 03-unikraft-console/          — Unikraft from source, GRUB + EFI, dd deploy
+    │   └── defconfigs/               — multiboot / efi (override with DEFCONFIG=...)
+    └── 04-unikraft-go-http/          — Go HTTP server on Unikraft with lwip + virtio-net
 ```
 
 ## CI
 
-A weekly GitHub Action deploys `00-ops-nginx-qemu`, `00-kraft-nginx-qemu`, and `02-ops-hello-dd` end-to-end on a real Hetzner VM (name: `unikernel-ci`, separate from the dev `unikernel-example` so the two don't step on each other). See [`.github/workflows/test-examples.yml`](.github/workflows/test-examples.yml). Examples 01 and 03 are skipped: 01 needs a paid object-storage bucket; 03's verification is visual (serial console output), no network signal.
+[![test-examples](https://github.com/BrainbugCloud/hetzner-unikernels/actions/workflows/test-examples.yml/badge.svg)](https://github.com/BrainbugCloud/hetzner-unikernels/actions/workflows/test-examples.yml)
+
+A weekly GitHub Action deploys `00-ops-nginx-qemu`, `00-kraft-nginx-qemu`, `02-ops-hello-dd`, and `04-unikraft-go-http` end-to-end on a real Hetzner VM (name: `unikernel-ci`, separate from the dev `unikernel-example` so the two don't step on each other). See [`.github/workflows/test-examples.yml`](.github/workflows/test-examples.yml). Examples 01 and 03 are skipped: 01 needs a paid object-storage bucket; 03's verification is visual (serial console output), no network signal.
 
 ### Hetzner token: where it lives, how to set it
 
