@@ -153,9 +153,11 @@ jobs:
           esac
 
       # ── 04-unikraft-go-http ──────────────────────────────────────────
+      # NOTE: Rebuild does NOT change server type. Earlier examples create
+      # cpx22 (default SERVER_TYPE), so we must deploy the EFI variant.
       - name: Deploy 04-unikraft-go-http
         timeout-minutes: 10
-        run: make -C examples/04-unikraft-go-http deploy-grub SERVER_TYPE=cx23
+        run: make -C examples/04-unikraft-go-http deploy-efi
 
       - name: Smoke-test 04-unikraft-go-http (port 8080)
         timeout-minutes: 5
