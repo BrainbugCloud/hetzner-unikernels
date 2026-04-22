@@ -133,6 +133,21 @@ jobs:
             *) echo "::error::unexpected body on port 8080"; exit 1;;
           esac
 
+      # ── 04-unikraft-go-http ──────────────────────────────────────────
+      - name: Deploy 04-unikraft-go-http
+        timeout-minutes: 10
+        run: make -C examples/04-unikraft-go-http deploy-grub SERVER_TYPE=cx23
+
+      - name: Smoke-test 04-unikraft-go-http (port 8080)
+        run: |
+          IP=$(make -s ip)
+          BODY=$(curl -sf --max-time 5 "http://$IP:8080")
+          echo "$BODY"
+          case "$BODY" in
+            *"Hello from Go on Unikraft"*) echo "::notice::04-unikraft-go-http response matches";;
+            *) echo "::error::unexpected body on port 8080"; exit 1;;
+          esac
+
       # ── Always-run teardown ──────────────────────────────────────────
       - name: Capture cloud-init log on failure
         if: failure()

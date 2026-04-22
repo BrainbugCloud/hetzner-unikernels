@@ -18,6 +18,7 @@
 #   01-ops-hello-http     OPS native deploy via snapshot (needs object storage)
 #   02-ops-hello-dd       OPS image dd'd straight onto the VM's disk
 #   03-unikraft-console   Unikraft hello-world built from source, dd'd to disk
+#   04-unikraft-go-http   Unikraft Go HTTP server with lwip, dd'd to disk
 #
 # See examples/<name>/README.md for the per-example story.
 
@@ -30,7 +31,8 @@ EXAMPLES := \
 	00-kraft-nginx-qemu \
 	01-ops-hello-http \
 	02-ops-hello-dd \
-	03-unikraft-console
+	03-unikraft-console \
+	04-unikraft-go-http
 
 .PHONY: $(EXAMPLES)
 
