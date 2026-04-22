@@ -75,9 +75,11 @@ jobs:
         run: |
           KRAFTKIT_VERSION=0.11.2
           curl -sSLo kraftkit.tar.gz \
-            "https://github.com/unikraft/kraftkit/releases/download/v${KRAFTKIT_VERSION}/kraftkit_${KRAFTKIT_VERSION}_linux_amd64.tar.gz"
-          sudo tar -C /usr/local/bin --no-same-owner -xzf kraftkit.tar.gz kraft
-          rm kraftkit.tar.gz
+            "https://github.com/unikraft/kraftkit/releases/download/v${KRAFTKIT_VERSION}/kraft_${KRAFTKIT_VERSION}_linux_amd64.tar.gz"
+          TMPDIR=$(mktemp -d)
+          tar -xzf kraftkit.tar.gz -C "$TMPDIR"
+          sudo install -m 755 "$TMPDIR"/kraft /usr/local/bin/kraft
+          rm -rf kraftkit.tar.gz "$TMPDIR"
           kraft version
 
       - name: Install Unikraft build dependencies
