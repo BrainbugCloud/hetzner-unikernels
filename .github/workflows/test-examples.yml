@@ -73,9 +73,20 @@ jobs:
 
       - name: Install KraftKit (for Unikraft initramfs builds)
         run: |
-          curl -fsSL https://get.kraftkit.sh | sh
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          KRAFTKIT_VERSION=0.11.2
+          curl -sSLo kraftkit.tar.gz \
+            "https://github.com/unikraft/kraftkit/releases/download/v${KRAFTKIT_VERSION}/kraftkit_${KRAFTKIT_VERSION}_linux_amd64.tar.gz"
+          sudo tar -C /usr/local/bin --no-same-owner -xzf kraftkit.tar.gz kraft
+          rm kraftkit.tar.gz
           kraft version
+
+      - name: Install Unikraft build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential nasm flex bison \
+            xorriso grub-pc-bin mtools \
+            gdisk libncurses-dev
 
       - name: Pre-clean any leftover CI server
         # Previous run may have died between create and destroy.
