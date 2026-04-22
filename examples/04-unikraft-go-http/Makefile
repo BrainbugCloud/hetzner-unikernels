@@ -115,7 +115,7 @@ disk-grub: $(KERNEL_MB) $(INITRD)
 
 disk-efi: $(KERNEL_EFI) $(INITRD)
 	@mkdir -p image
-	@printf 'console=ttyS0 netdev.ip=$(IP) vfs.fstab=[ "initrd0:/:extract:::" ] -- /server\n' > image/$(STUB_NAME).cmdl
+	@printf 'console=ttyS0 netdev.ip=$(IP) vfs.fstab=[initrd0:/:extract:::] -- /server' > image/$(STUB_NAME).cmdl
 	dd if=/dev/zero of=image/esp.img bs=1M count=16 status=none
 	/usr/sbin/mkfs.vfat -F 16 image/esp.img >/dev/null
 	/usr/bin/mmd    -i image/esp.img ::EFI ::EFI/BOOT
