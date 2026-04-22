@@ -71,6 +71,12 @@ jobs:
         with:
           go-version: '1.23'
 
+      - name: Install KraftKit (for Unikraft initramfs builds)
+        run: |
+          curl -fsSL https://get.kraftkit.sh | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          kraft version
+
       - name: Pre-clean any leftover CI server
         # Previous run may have died between create and destroy.
         run: hcloud server delete "$SERVER" 2>/dev/null || true
