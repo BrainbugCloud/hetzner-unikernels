@@ -1,6 +1,10 @@
 CONFIG_UK_NAME="elfloader"
 CONFIG_PLAT_KVM=y
 
+# Statically-allocated bootinfo memregion list must fit the EFI memory
+# map. Hetzner Cloud cpx22 produces ~157 entries; default 128 overflows.
+CONFIG_UKPLAT_MEMREGION_MAX_COUNT=256
+
 # Boot: EFI stub (direct UEFI, no GRUB)
 CONFIG_KVM_BOOT_PROTO_EFI_STUB=y
 CONFIG_LIBUKPLAT_NATIVE=y
@@ -13,7 +17,7 @@ CONFIG_ARCH_X86_64=y
 
 # Paging
 CONFIG_HAVE_PAGING=y
-CONFIG_HAVE_PAGING_DIRECTMAP=y
+CONFIG_LIBUKPAGING_DIRECTMAP=y
 CONFIG_PAGING=y
 CONFIG_LIBUKVMEM=y
 CONFIG_LIBUKFALLOC=y

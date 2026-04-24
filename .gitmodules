@@ -1,16 +1,16 @@
 [submodule "third_party/unikraft"]
 	path = third_party/unikraft
 	url = https://github.com/BrainbugCloud/unikraft
-	branch = v0.20.0-Kiviuq-Hetzner
+	branch = v0.21.0-Ijiraq-Hetzner
 [submodule "third_party/lib-lwip"]
 	path = third_party/lib-lwip
 	url = https://github.com/unikraft/lib-lwip.git
-	tag = RELEASE-0.20.0
+	tag = RELEASE-0.21.0
 [submodule "third_party/lib-libelf"]
 	path = third_party/lib-libelf
 	url = https://github.com/unikraft/lib-libelf.git
-	tag = RELEASE-0.20.0
+	tag = RELEASE-0.21.0
 [submodule "third_party/app-elfloader"]
 	path = third_party/app-elfloader
 	url = https://github.com/unikraft/app-elfloader.git
-	tag = RELEASE-0.20.0
+	tag = RELEASE-0.21.0
