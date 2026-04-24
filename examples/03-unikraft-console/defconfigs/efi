@@ -5,6 +5,12 @@ CONFIG_PLAT_KVM=y
 # map. Hetzner Cloud cpx22 produces ~157 entries; default 128 overflows.
 CONFIG_UKPLAT_MEMREGION_MAX_COUNT=256
 
+# Match cpx22's vCPU count. Workaround for an off-by-one in
+# uk_acpi_madt_fill_cpu_idmap (upstream) that writes past the 1-slot
+# per-CPU variable array when MAXCOUNT=1 meets a multi-CPU MADT.
+# See: https://github.com/BrainbugCloud/hetzner-unikernels/issues/30
+CONFIG_UKPLAT_CPU_MAXCOUNT=2
+
 # Boot: EFI stub (direct UEFI, no GRUB)
 CONFIG_KVM_BOOT_PROTO_EFI_STUB=y
 CONFIG_LIBUKPLAT_NATIVE=y
