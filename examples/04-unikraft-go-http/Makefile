@@ -175,6 +175,12 @@ run-grub-simple: disk-grub
 # virtio-scsi the real cpx22 uses — Unikraft has neither block driver, so
 # the choice doesn't affect the unikernel; the EFI stub reads the kernel
 # off the disk before ExitBootServices and we never touch it again.
+#
+# virtio devices are placed behind explicit pcie-root-ports to mirror the
+# real cpx22 PCIe topology (devices live on secondary buses, not pcie.0
+# directly). This exercises Unikraft's PCIe bridge scan + 64-bit BAR
+# mapping path in driver/ukbus/pci — the same path that fails on real
+# Hetzner without the v0.21 PCIe bridge scanning fix.
 run-efi: disk-efi
 	@cp $(OVMF_VARS) image/ovmf-vars.fd
 	qemu-system-x86_64 \
@@ -184,8 +190,11 @@ run-efi: disk-efi
 	  -drive if=pflash,format=raw,readonly=on,file=$(OVMF_CODE) \
 	  -drive if=pflash,format=raw,file=image/ovmf-vars.fd \
 	  -drive file=$(EFI_IMG),if=none,id=hd0,format=raw \
-	  -device virtio-blk-pci,drive=hd0,bootindex=1 \
-	  -device virtio-net-pci,netdev=net0 -netdev user,id=net0,hostfwd=tcp::8080-:8080 \
+	  -device pcie-root-port,id=rp0,chassis=1,slot=0,bus=pcie.0 \
+	  -device pcie-root-port,id=rp1,chassis=2,slot=1,bus=pcie.0 \
+	  -device virtio-blk-pci,bus=rp0,drive=hd0,bootindex=1 \
+	  -device virtio-net-pci,bus=rp1,netdev=net0 \
+	  -netdev user,id=net0,hostfwd=tcp::8080-:8080 \
 	  -display none -serial stdio
 
 run-efi-simple: disk-efi
