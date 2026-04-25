@@ -52,7 +52,8 @@ OVMF_VARS  ?= /usr/share/OVMF/OVMF_VARS_4M.fd
 
 .PHONY: build run deploy \
         build-kernel-grub build-kernel-efi \
-        disk-grub disk-efi run-grub run-efi \
+        disk-grub disk-efi \
+        run-grub run-grub-simple run-efi run-efi-simple \
         deploy-grub deploy-efi clean
 
 # ── Default deploy target ──────────────────────────────────────────────
@@ -130,8 +131,37 @@ disk-efi: $(KERNEL_EFI) $(INITRD)
 	@echo "EFI disk: $(EFI_IMG) ($$(du -h $(EFI_IMG) | cut -f1))"
 
 # ── Local QEMU tests ───────────────────────────────────────────────────
+#
+# Two flavours per boot protocol:
+#
+#   run-{grub,efi}         Approximates the real Hetzner VM (cx23 / cpx22)
+#                          — q35 chipset, the actual host CPU model, 2 vCPUs,
+#                          4 GB RAM. Uses TCG warnings to flag features
+#                          the host CPU exposes but TCG can't emulate (those
+#                          bits are silently masked from the guest).
+#   run-{grub,efi}-simple  Minimum config the unikernel needs to boot
+#                          (1 GiB pages, RDRAND/RDSEED). Fast startup, useful
+#                          for iterating on the kernel itself without paying
+#                          for the larger memory + chipset emulation.
+#
+# Both flavours run under TCG (no /dev/kvm) as long as the kernel is built
+# with CONFIG_UKPLAT_CPU_MAXCOUNT=1 (the default). MAXCOUNT > 1 enables
+# CONFIG_HAVE_SMP, whose APIC bringup path UD2's under TCG.
 
+# ── cx23-close (multiboot/SeaBIOS) ──
+# cx23 is Intel Skylake (family 6 model 85), q35 chipset, BIOS firmware,
+# 2 vCPUs, 4 GB. The unikernel doesn't enumerate ACPI on the multiboot path,
+# so SMP and APIC differences vs the simple flavour don't change behaviour.
 run-grub: disk-grub
+	qemu-system-x86_64 \
+	  -machine pc-q35-7.2 \
+	  -cpu Skylake-Server-v3 \
+	  -smp 2 -m 4G -no-reboot \
+	  -device virtio-net-pci,netdev=net0 -netdev user,id=net0,hostfwd=tcp::8080-:8080 \
+	  -display none -serial stdio \
+	  -cdrom $(GRUB_IMG)
+
+run-grub-simple: disk-grub
 	qemu-system-x86_64 \
 	  -machine pc -cpu qemu64,+pdpe1gb,+rdrand,+rdseed \
 	  -m 256M -no-reboot \
@@ -139,7 +169,26 @@ run-grub: disk-grub
 	  -display none -serial stdio \
 	  -cdrom $(GRUB_IMG)
 
+# ── cpx22-close (EFI stub) ──
+# cpx22 is AMD EPYC-Genoa (Zen 4), q35 chipset, UEFI firmware (EDK II from
+# Hetzner), 2 vCPUs, 4 GB. The disk is virtio-blk here rather than the
+# virtio-scsi the real cpx22 uses — Unikraft has neither block driver, so
+# the choice doesn't affect the unikernel; the EFI stub reads the kernel
+# off the disk before ExitBootServices and we never touch it again.
 run-efi: disk-efi
+	@cp $(OVMF_VARS) image/ovmf-vars.fd
+	qemu-system-x86_64 \
+	  -machine pc-q35-7.2,smm=off \
+	  -cpu EPYC-Genoa \
+	  -smp 2 -m 4G -no-reboot \
+	  -drive if=pflash,format=raw,readonly=on,file=$(OVMF_CODE) \
+	  -drive if=pflash,format=raw,file=image/ovmf-vars.fd \
+	  -drive file=$(EFI_IMG),if=none,id=hd0,format=raw \
+	  -device virtio-blk-pci,drive=hd0,bootindex=1 \
+	  -device virtio-net-pci,netdev=net0 -netdev user,id=net0,hostfwd=tcp::8080-:8080 \
+	  -display none -serial stdio
+
+run-efi-simple: disk-efi
 	@cp $(OVMF_VARS) image/ovmf-vars.fd
 	qemu-system-x86_64 \
 	  -machine pc-i440fx-7.0,smm=off \
