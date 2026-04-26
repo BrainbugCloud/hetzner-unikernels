@@ -47,7 +47,8 @@ OVMF_VARS  ?= /usr/share/OVMF/OVMF_VARS_4M.fd
 
 .PHONY: build run use-branch deploy \
         build-kernel-grub build-kernel-efi \
-        disk-grub disk-efi run-grub run-efi \
+        disk-grub disk-efi \
+        run-grub run-grub-simple run-efi run-efi-simple \
         deploy-grub deploy-efi clean
 
 # ── Default deploy target (dispatched to by top-level `make 03-...`) ───
@@ -135,8 +136,27 @@ disk-efi: $(KERNEL_EFI) $(INITRD)
 	@echo "EFI disk: $(EFI_IMG) ($$(du -h $(EFI_IMG) | cut -f1))"
 
 # ── Local QEMU tests ───────────────────────────────────────────────────
+#
+# Two flavours per boot protocol — see examples/04-unikraft-go-http/Makefile
+# for the full rationale. Short version:
+#
+#   run-{grub,efi}         Approximates Hetzner cx23 / cpx22.
+#   run-{grub,efi}-simple  Minimum config the unikernel needs to boot.
+#
+# Both flavours run under TCG as long as the kernel uses the default
+# CONFIG_UKPLAT_CPU_MAXCOUNT=1.
 
+# ── cx23-close (multiboot/SeaBIOS) ──
 run-grub: disk-grub
+	qemu-system-x86_64 \
+	  -machine pc-q35-7.2 \
+	  -cpu Skylake-Server-v3 \
+	  -smp 2 -m 4G -no-reboot \
+	  -device virtio-net-pci,netdev=net0 -netdev user,id=net0 \
+	  -display none -serial stdio \
+	  -cdrom $(GRUB_IMG)
+
+run-grub-simple: disk-grub
 	qemu-system-x86_64 \
 	  -machine pc -cpu qemu64,+pdpe1gb,+rdrand,+rdseed \
 	  -m 128M -no-reboot \
@@ -144,7 +164,21 @@ run-grub: disk-grub
 	  -display none -serial stdio \
 	  -cdrom $(GRUB_IMG)
 
+# ── cpx22-close (EFI stub) ──
 run-efi: disk-efi
+	@cp $(OVMF_VARS) image/ovmf-vars.fd
+	qemu-system-x86_64 \
+	  -machine pc-q35-7.2,smm=off \
+	  -cpu EPYC-Genoa \
+	  -smp 2 -m 4G -no-reboot \
+	  -drive if=pflash,format=raw,readonly=on,file=$(OVMF_CODE) \
+	  -drive if=pflash,format=raw,file=image/ovmf-vars.fd \
+	  -drive file=$(EFI_IMG),if=none,id=hd0,format=raw \
+	  -device virtio-blk-pci,drive=hd0,bootindex=1 \
+	  -device virtio-net-pci,netdev=net0 -netdev user,id=net0 \
+	  -display none -serial stdio
+
+run-efi-simple: disk-efi
 	@cp $(OVMF_VARS) image/ovmf-vars.fd
 	qemu-system-x86_64 \
 	  -machine pc-i440fx-7.0,smm=off \
