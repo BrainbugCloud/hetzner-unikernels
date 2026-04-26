@@ -23,10 +23,8 @@ CONFIG_LIBUKVMEM=y
 CONFIG_LIBUKFALLOC=y
 CONFIG_LIBUKALLOCPOOL=y
 
-# Console (serial + VGA)
-CONFIG_LIBVGACONS=y
-
-# GOP framebuffer console (for UEFI VNC on cpx)
+# Console (GOP framebuffer only for UEFI)
+# CONFIG_LIBVGACONS is not set
 CONFIG_LIBUKCONSOLE_GOP=y
 
 # Filesystems
