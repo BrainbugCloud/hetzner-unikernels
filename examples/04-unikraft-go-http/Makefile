@@ -207,23 +207,27 @@ run-efi-simple: disk-efi
 
 deploy-grub:
 	$(call ensure-server-vanilla)
-	$(eval _IP := $(shell hcloud server describe $(SERVER) -o format='{{.PublicNet.IPv4.IP}}'))
-	$(MAKE) disk-grub IP=$(_IP)/32:$(GATEWAY)
+	@_IP=$$(hcloud server describe $(SERVER) -o format='{{.PublicNet.IPv4.IP}}'); \
+	 $(MAKE) disk-grub IP=$$_IP/32:$(GATEWAY); \
+	 _IP=$$(hcloud server describe $(SERVER) -o format='{{.PublicNet.IPv4.IP}}')
 	$(call wait-ssh)
 	$(call dd-deploy,$(GRUB_IMG))
-	@echo ""
-	@echo "$(GREEN)$(BOLD)$(SERVER) is running 04-unikraft-go-http (GRUB)!$(RESET)"
-	@echo "  curl http://$(_IP):8080/"
+	@_IP=$$(hcloud server describe $(SERVER) -o format='{{.PublicNet.IPv4.IP}}'); \
+	 echo ""; \
+	 echo "$(GREEN)$(BOLD)$(SERVER) is running 04-unikraft-go-http (GRUB)!$(RESET)"; \
+	 echo "  curl http://$$_IP:8080/"
 
 deploy-efi:
 	$(call ensure-server-vanilla)
-	$(eval _IP := $(shell hcloud server describe $(SERVER) -o format='{{.PublicNet.IPv4.IP}}'))
-	$(MAKE) disk-efi IP=$(_IP)/32:$(GATEWAY)
+	@_IP=$$(hcloud server describe $(SERVER) -o format='{{.PublicNet.IPv4.IP}}'); \
+	 $(MAKE) disk-efi IP=$$_IP/32:$(GATEWAY); \
+	 _IP=$$(hcloud server describe $(SERVER) -o format='{{.PublicNet.IPv4.IP}}')
 	$(call wait-ssh)
 	$(call dd-deploy,$(EFI_IMG))
-	@echo ""
-	@echo "$(GREEN)$(BOLD)$(SERVER) is running 04-unikraft-go-http (EFI)!$(RESET)"
-	@echo "  curl http://$(_IP):8080/"
+	@_IP=$$(hcloud server describe $(SERVER) -o format='{{.PublicNet.IPv4.IP}}'); \
+	 echo ""; \
+	 echo "$(GREEN)$(BOLD)$(SERVER) is running 04-unikraft-go-http (EFI)!$(RESET)"; \
+	 echo "  curl http://$$_IP:8080/"
 
 # ── Clean ──────────────────────────────────────────────────────────────
 
